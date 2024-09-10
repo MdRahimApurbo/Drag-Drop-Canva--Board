@@ -1,18 +1,34 @@
-import { useSortable } from "@dnd-kit/sortable";
+import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Trash2 } from "lucide-react";
-import { useState } from "react";
-import { Column, Id } from "../types";
+import { PlusCircle, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Column, Id, Task } from "../types";
+import TaskCard from "./TaskCard";
 
 interface ColumnContainerProps {
   column: Column;
   deleteColumn: (id: Id) => void;
   updateColumn: (id: Id, title: string) => void;
+  createTask: (columnId: Id) => void;
+  tasks: Task[];
+  deleteTask: (id: Id) => void;
+  updateTask: (id: Id, content: string) => void;
 }
 
 const ColumnContainer = (props: ColumnContainerProps) => {
-  const { column, deleteColumn, updateColumn } = props;
+  const {
+    column,
+    deleteColumn,
+    updateColumn,
+    createTask,
+    tasks,
+    deleteTask,
+    updateTask,
+  } = props;
   const [editMode, setEditMode] = useState(false);
+  const tasksIds = useMemo(() => {
+    return tasks.map((task) => task.id);
+  }, [tasks]);
   const {
     setNodeRef,
     attributes,
@@ -26,6 +42,7 @@ const ColumnContainer = (props: ColumnContainerProps) => {
       type: "Column",
       column,
     },
+    disabled: editMode,
   });
 
   const style = {
@@ -88,7 +105,27 @@ const ColumnContainer = (props: ColumnContainerProps) => {
           <Trash2 size={20} />
         </button>
       </div>
-      <div className="flex flex-grow">Content</div>
+      <div className="flex flex-grow flex-col p-2 overflow-x-hidden overflow-y-auto gap-2">
+        {tasks.map((task) => (
+          <SortableContext items={tasksIds}>
+            <TaskCard
+              key={task.id}
+              task={task}
+              deleteTask={deleteTask}
+              updateTask={updateTask}
+            />
+          </SortableContext>
+        ))}
+      </div>
+      <button
+        onClick={() => {
+          createTask(column.id);
+        }}
+        className="flex gap-2 items-center border-2 rounded-md p-4 border-x-columnBackground border-columnBackground hover:bg-mainBackground hover:text-rose-500 active:bg-black"
+      >
+        <PlusCircle size={16} />
+        Add Task
+      </button>
     </div>
   );
 };

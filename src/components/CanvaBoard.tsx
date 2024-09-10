@@ -11,13 +11,18 @@ import { arrayMove, SortableContext } from "@dnd-kit/sortable";
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Column, Id } from "../types";
+import { Column, Id, Task } from "../types";
 import ColumnContainer from "./ColumnContainer";
+import TaskCard from "./TaskCard";
 
 const CanvaBoard = () => {
   const [columns, setColumns] = useState<Column[]>([]);
   const columnsId = useMemo(() => columns.map((col) => col.id), [columns]);
+
+  const [tasks, setTasks] = useState<Task[]>([]);
+
   const [activeColumn, setActiveColumn] = useState<Column>();
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -41,6 +46,10 @@ const CanvaBoard = () => {
                   column={col}
                   deleteColumn={deleteColumn}
                   updateColumn={updateColumn}
+                  createTask={createTask}
+                  deleteTask={deleteTask}
+                  updateTask={updateTask}
+                  tasks={tasks.filter((task) => task.columnId === col.id)}
                 />
               ))}
             </SortableContext>
@@ -62,6 +71,19 @@ const CanvaBoard = () => {
                 column={activeColumn}
                 deleteColumn={deleteColumn}
                 updateColumn={updateColumn}
+                createTask={createTask}
+                deleteTask={deleteTask}
+                updateTask={updateTask}
+                tasks={tasks.filter(
+                  (task) => task.columnId === activeColumn.id
+                )}
+              />
+            )}
+            {activeTask && (
+              <TaskCard
+                task={activeTask}
+                deleteTask={deleteTask}
+                updateTask={updateTask}
               />
             )}
           </DragOverlay>,
@@ -83,17 +105,21 @@ const CanvaBoard = () => {
     setColumns(filterColumns);
   }
   function updateColumn(id: Id, title: string) {
-    setColumns((columns) => {
-      const columnToUpdate = columns.find((col) => col.id === id);
-      if (!columnToUpdate) return columns;
-      columnToUpdate.title = title;
-      return [...columns];
+    const newColumns = columns.map((col) => {
+      if (col.id === id) {
+        return { ...col, title };
+      }
+      return col;
     });
+    setColumns(newColumns);
   }
   function onDragStart(event: DragStartEvent) {
-    // console.log(event);
     if (event.active.data.current?.type === "Column") {
       setActiveColumn(event.active.data.current.column);
+      return;
+    }
+    if (event.active.data.current?.type === "Task") {
+      setActiveTask(event.active.data.current.task);
       return;
     }
   }
@@ -116,6 +142,29 @@ const CanvaBoard = () => {
   }
   function generateId() {
     return Math.floor(Math.random() * 10001);
+  }
+
+  //TAsk
+  function createTask(columnId: Id) {
+    const newTask: Task = {
+      id: generateId(),
+      columnId: columnId,
+      content: `Task ${tasks.length + 1}`,
+    };
+    setTasks([...tasks, newTask]);
+  }
+  function deleteTask(id: Id) {
+    const newTasks = tasks.filter((task) => task.id !== id);
+    setTasks(newTasks);
+  }
+  function updateTask(id: Id, content: string) {
+    const newTasks = tasks.map((task) => {
+      if (task.id === id) {
+        return { ...task, content };
+      }
+      return task;
+    });
+    setTasks(newTasks);
   }
 };
 
