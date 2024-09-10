@@ -1,6 +1,7 @@
 import {
   DndContext,
   DragEndEvent,
+  DragOverEvent,
   DragOverlay,
   DragStartEvent,
   PointerSensor,
@@ -18,11 +19,10 @@ import TaskCard from "./TaskCard";
 const CanvaBoard = () => {
   const [columns, setColumns] = useState<Column[]>([]);
   const columnsId = useMemo(() => columns.map((col) => col.id), [columns]);
-
   const [tasks, setTasks] = useState<Task[]>([]);
-
-  const [activeColumn, setActiveColumn] = useState<Column>();
+  const [activeColumn, setActiveColumn] = useState<Column | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -36,6 +36,7 @@ const CanvaBoard = () => {
         sensors={sensors}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
+        onDragOver={onDragOver}
       >
         <div className="m-auto flex gap-4">
           <div className="flex gap-4">
@@ -103,6 +104,8 @@ const CanvaBoard = () => {
   function deleteColumn(id: Id) {
     const filterColumns = columns.filter((col) => col.id !== id);
     setColumns(filterColumns);
+    const newTasks = tasks.filter((task) => task.columnId !== id);
+    setTasks(newTasks);
   }
   function updateColumn(id: Id, title: string) {
     const newColumns = columns.map((col) => {
@@ -124,8 +127,9 @@ const CanvaBoard = () => {
     }
   }
   function onDragEnd(event: DragEndEvent) {
+    setActiveColumn(null);
+    setActiveTask(null);
     const { active, over } = event;
-    console.log(active, over);
     if (!over) return;
     const activeColumnId = active.id;
     const overColumnId = over.id;
@@ -165,6 +169,42 @@ const CanvaBoard = () => {
       return task;
     });
     setTasks(newTasks);
+  }
+
+  function onDragOver(event: DragOverEvent) {
+    const { active, over } = event;
+    if (!over) return;
+    const activeId = active.id;
+    const overId = over.id;
+    if (activeId === overId) return;
+
+    const isActiveTask = active.data.current?.type === "Task";
+    const isOverTask = over.data.current?.type === "Task";
+
+    if (!isActiveTask) return;
+
+    // im dropping a task into a another task
+
+    if (isActiveTask && isOverTask) {
+      setTasks((tasks) => {
+        const activeIndex = tasks.findIndex((t) => t.id === activeId);
+        const overIndex = tasks.findIndex((t) => t.id === overId);
+        tasks[activeIndex].columnId = tasks[overIndex].columnId;
+        return arrayMove(tasks, activeIndex, overIndex);
+      });
+    }
+
+    const issOverColumn = over.data.current?.type === "Column";
+
+    // im dropping a task into a Column
+
+    if (isActiveTask && issOverColumn) {
+      setTasks((tasks) => {
+        const activeIndex = tasks.findIndex((t) => t.id === activeId);
+        tasks[activeIndex].columnId = overId;
+        return arrayMove(tasks, activeIndex, activeIndex);
+      });
+    }
   }
 };
 

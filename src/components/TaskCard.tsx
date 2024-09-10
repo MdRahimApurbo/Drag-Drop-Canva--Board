@@ -51,7 +51,7 @@ const TaskCard = ({ task, deleteTask, updateTask }: Props) => {
   } = useSortable({
     id: task.id,
     data: {
-      type: "Column",
+      type: "Task",
       task,
     },
     disabled: editMode,
